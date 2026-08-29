@@ -20,4 +20,5 @@ USDC / USDT 双轨、HTTP 402、策略沙箱与结果托管：`/clearing`。第�
 `docs/A2A_CLEARING.md`、`/docs/a2a`。Claude Code 教程见
 `docs/CLAUDE_CODE_GUIDE.md`，Cursor 教程见 `docs/CURSOR_GUIDE.md`。主网发布门控见
 `docs/MAINNET_RUNBOOK.md`（默认关闭，需双人审批与 `npm run preflight:mainnet`）。
+推送堆叠 PR：`docs/PUSH_STACKED_PRS.md`（需先 `gh auth login`）。
 独立 Agent：`agents/a2a/`。
