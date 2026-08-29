@@ -44,6 +44,7 @@ jobs:
       - run: npm run check:clearing-config
       - run: npm run db:clearing:migrate
       - run: npm run test:clearing
+      - run: npm run test:mainnet-gate
       - run: npm run agent:cdp:typecheck
       - run: npm run lint
       - run: npm run build

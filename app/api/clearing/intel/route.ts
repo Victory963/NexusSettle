@@ -5,6 +5,7 @@ import { verifyAgentRequest } from "@/lib/clearing/auth";
 import { writeAudit } from "@/lib/clearing/audit";
 import { tokenFor } from "@/lib/clearing/assets";
 import { getClearingMode } from "@/lib/clearing/config";
+import { evaluateMainnetGate } from "@/lib/clearing/mainnet-gate";
 import {
   getClearingRepository,
   hasDurableClearingStore,
@@ -12,13 +13,13 @@ import {
 import { decodePaymentPayload, PAYMENT_SIGNATURE_HEADER } from "@/lib/clearing/x402";
 import { getX402Server } from "@/lib/clearing/x402-server";
 
-async function unavailable(reason: string): Promise<NextResponse<unknown>> {
-  return NextResponse.json({ error: reason }, { status: 503 });
+async function unavailable(reason: string, details?: string[]): Promise<NextResponse<unknown>> {
+  return NextResponse.json({ error: reason, details }, { status: 503 });
 }
 
-async function paidHandler(req: NextRequest): Promise<NextResponse<unknown>> {
+async function paidHandler(req: NextRequest, rail: "testnet" | "mainnet"): Promise<NextResponse<unknown>> {
   if (!hasDurableClearingStore()) {
-    return unavailable("DATABASE_URL is required for testnet settlement");
+    return unavailable("DATABASE_URL is required for live settlement");
   }
   const secret = process.env.AGENT_HMAC_SECRET;
   const expectedAgentId = process.env.CLEARING_AGENT_ID;
@@ -41,7 +42,7 @@ async function paidHandler(req: NextRequest): Promise<NextResponse<unknown>> {
       event: "agent.authentication",
       actor: req.headers.get("X-Lumen-Agent-Id") ?? "unknown",
       outcome: "deny",
-      details: { reason: auth.reason },
+      details: { reason: auth.reason, rail },
     });
     return NextResponse.json({ error: auth.reason }, { status: auth.status });
   }
@@ -55,6 +56,7 @@ async function paidHandler(req: NextRequest): Promise<NextResponse<unknown>> {
       event: "agent.nonce_replay",
       actor: auth.auth.agentId,
       outcome: "deny",
+      details: { rail },
     });
     return NextResponse.json({ error: "Agent authentication nonce already used" }, { status: 409 });
   }
@@ -64,6 +66,7 @@ async function paidHandler(req: NextRequest): Promise<NextResponse<unknown>> {
       event: "agent.rate_limit",
       actor: auth.auth.agentId,
       outcome: "deny",
+      details: { rail },
     });
     return NextResponse.json({ error: "Agent rate limit exceeded" }, { status: 429 });
   }
@@ -71,14 +74,16 @@ async function paidHandler(req: NextRequest): Promise<NextResponse<unknown>> {
     event: "agent.authentication",
     actor: auth.auth.agentId,
     outcome: "allow",
-    details: { payer },
+    details: { payer, rail },
   });
   return NextResponse.json({
     status: "success",
-    mode: "testnet",
+    mode: rail,
     data: {
       alpha_intel:
-        "This resource was authorized by a KYA-bound agent and settled by an x402 facilitator.",
+        rail === "mainnet"
+          ? "Mainnet resource unlocked after dual-approval gate, KYB attestation, and facilitator settlement."
+          : "This resource was authorized by a KYA-bound agent and settled by an x402 facilitator.",
       asset: new URL(req.url).searchParams.get("asset") === "usdt" ? "usdt" : "usdc",
     },
   });
@@ -88,29 +93,44 @@ const merchant = process.env.CLEARING_MERCHANT_ADDRESS as `0x${string}` | undefi
 const defaultFacilitator = process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator";
 const usdtFacilitator = process.env.X402_USDT_FACILITATOR_URL;
 
-const usdcHandler = merchant
-  ? withX402(
-      paidHandler,
-      {
-        accepts: {
-          scheme: "exact",
-          price: "$0.01",
-          network: "eip155:84532",
-          payTo: merchant,
-        },
-        description: "Lumen A2A premium intelligence",
-        mimeType: "application/json",
-        serviceName: "Lumen Clearing",
-        tags: ["a2a", "usdc"],
+function buildUsdcHandler(network: "eip155:84532" | "eip155:8453", facilitatorUrl: string, rail: "testnet" | "mainnet") {
+  if (!merchant) return () => unavailable("CLEARING_MERCHANT_ADDRESS is required");
+  const canary = rail === "mainnet" ? process.env.CLEARING_CANARY_MAX_ATOMIC : undefined;
+  return withX402(
+    (req) => paidHandler(req, rail),
+    {
+      accepts: {
+        scheme: "exact",
+        price: canary && Number(canary) > 0
+          ? {
+              asset: tokenFor("eip155:8453", "usdc"),
+              amount: canary,
+              extra: { name: "USD Coin", version: "2" },
+            }
+          : "$0.01",
+        network,
+        payTo: merchant,
       },
-      getX402Server(defaultFacilitator),
-    )
-  : () => unavailable("CLEARING_MERCHANT_ADDRESS is required");
+      description: "Lumen A2A premium intelligence",
+      mimeType: "application/json",
+      serviceName: "Lumen Clearing",
+      tags: ["a2a", "usdc", rail],
+    },
+    getX402Server(facilitatorUrl),
+  );
+}
+
+const testnetUsdc = buildUsdcHandler("eip155:84532", defaultFacilitator, "testnet");
+const mainnetUsdc = buildUsdcHandler(
+  "eip155:8453",
+  process.env.X402_FACILITATOR_URL ?? "",
+  "mainnet",
+);
 
 const usdtHandler =
   merchant && usdtFacilitator
     ? withX402(
-        paidHandler,
+        (req) => paidHandler(req, "testnet"),
         {
           accepts: {
             scheme: "exact",
@@ -136,15 +156,33 @@ const usdtHandler =
     : () => unavailable("USDT testnet requires X402_USDT_FACILITATOR_URL");
 
 export async function GET(req: NextRequest) {
-  const mode = getClearingMode();
-  if (mode !== "testnet") {
-    return unavailable(
-      mode === "demo"
-        ? "Use /api/clearing/demo/intel for the explicitly simulated flow."
-        : "Mainnet settlement must use the gated release route.",
-    );
+  if (process.env.CLEARING_KILL_SWITCH === "true") {
+    return unavailable("CLEARING_KILL_SWITCH is engaged");
   }
-  return new URL(req.url).searchParams.get("asset") === "usdt"
-    ? usdtHandler(req)
-    : usdcHandler(req);
+
+  const mode = getClearingMode();
+  if (mode === "demo") {
+    return unavailable("Use /api/clearing/demo/intel for the explicitly simulated flow.");
+  }
+
+  if (mode === "mainnet") {
+    const gate = evaluateMainnetGate();
+    if (!gate.ok) {
+      await writeAudit({
+        event: "mainnet.gate_deny",
+        actor: process.env.CLEARING_AGENT_ID ?? "unknown",
+        outcome: "deny",
+        details: { reasons: gate.reasons },
+      });
+      return unavailable("Mainnet release gate is closed", gate.reasons);
+    }
+    if (new URL(req.url).searchParams.get("asset") === "usdt") {
+      return unavailable(
+        "Mainnet USDT requires a production facilitator Permit2 attestation; leave unset until verified.",
+      );
+    }
+    return mainnetUsdc(req);
+  }
+
+  return new URL(req.url).searchParams.get("asset") === "usdt" ? usdtHandler(req) : testnetUsdc(req);
 }

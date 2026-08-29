@@ -1,3 +1,5 @@
+import { evaluateMainnetGate } from "../lib/clearing/mainnet-gate";
+
 const mode = (process.env.CLEARING_MODE ?? "demo").toLowerCase();
 const errors: string[] = [];
 
@@ -19,7 +21,10 @@ if (!["demo", "testnet", "mainnet"].includes(mode)) {
 }
 
 if (mode === "mainnet") {
-  errors.push("Mainnet is unavailable until the phase-C release gate is approved");
+  const gate = evaluateMainnetGate();
+  if (!gate.ok) {
+    for (const reason of gate.reasons) errors.push(reason);
+  }
 }
 
 if (mode === "testnet") {
