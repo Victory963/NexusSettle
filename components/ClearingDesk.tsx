@@ -24,6 +24,7 @@ type LedgerRow = {
 };
 
 type TestRow = { name: string; pass: boolean; detail: string };
+type Readiness = { ready: boolean; mode: "demo" | "testnet" | "mainnet" };
 
 function atomicUsd(v: string) {
   return (Number(v) / 1e6).toFixed(4);
@@ -34,20 +35,23 @@ export function ClearingDesk() {
   const [balances, setBalances] = useState<Record<string, { usdc: string; usdt: string }>>({});
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
   const [tests, setTests] = useState<TestRow[]>([]);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [log, setLog] = useState<string>("Ready.");
   const [asset, setAsset] = useState<"usdc" | "usdt">("usdc");
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    const [a, l, h] = await Promise.all([
+    const [a, l, h, r] = await Promise.all([
       fetch("/api/clearing/agents").then((r) => r.json()),
       fetch("/api/clearing/ledger").then((r) => r.json()),
       fetch("/api/clearing/health").then((r) => r.json()),
+      fetch("/api/clearing/ready").then((r) => r.json()),
     ]);
     setAgents(a.agents ?? []);
     setBalances(l.balances ?? a.balances ?? {});
     setLedger(l.ledger ?? []);
     setTests(h.tests ?? []);
+    setReadiness(r);
   }, []);
 
   useEffect(() => {
@@ -146,6 +150,18 @@ export function ClearingDesk() {
 
   return (
     <div className="space-y-8">
+      <div
+        role="status"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200/20 bg-amber-200/8 px-4 py-3 text-sm"
+      >
+        <span>
+          Rail: <strong className="uppercase text-amber-100">{readiness?.mode ?? "loading"}</strong>
+          {readiness?.mode === "demo" ? " — synthetic evidence only; no funds move" : ""}
+        </span>
+        <span className={readiness?.ready ? "text-emerald-300" : "text-rose-300"}>
+          {readiness?.ready ? "READY" : "NOT READY"}
+        </span>
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm text-white/60">
           Asset

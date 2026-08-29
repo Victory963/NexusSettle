@@ -1,0 +1,30 @@
+---
+description: Require payment regression evidence before handoff
+globs: "{app/api/clearing/**,lib/clearing/**,agents/a2a/**,db/migrations/**,proxy.ts}"
+alwaysApply: false
+---
+
+# A2A verification
+
+For every changed payment boundary, add the relevant negative test:
+
+- malformed or missing `PAYMENT-SIGNATURE`
+- wrong agent/payer, merchant, token contract, network, or amount
+- expired authorization or HMAC timestamp
+- repeated auth nonce, payment identifier, or transaction hash
+- failed resource handler and failed facilitator settlement
+- unavailable PostgreSQL or facilitator
+
+Before handoff run:
+
+```powershell
+npm run check:clearing-config
+npm run test:clearing
+npm run agent:cdp:typecheck
+npm run lint
+npm run build
+```
+
+Report `test:clearing:postgres` as skipped when `DATABASE_URL` is absent. Never describe a
+synthetic hash as on-chain evidence. A real testnet claim requires `PAYMENT-RESPONSE`, a Base
+Sepolia transaction hash, and matching settlement plus ledger rows.

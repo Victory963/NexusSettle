@@ -18,4 +18,5 @@ http://localhost:3000
 USDC / USDT 双轨、HTTP 402、策略沙箱与结果托管：`/clearing`。第一次运行请从
 `docs/BEGINNER_SETUP.md` 开始；测试网运维见 `docs/TESTNET_RUNBOOK.md`；协议与架构见
 `docs/A2A_CLEARING.md`、`/docs/a2a`。Claude Code 教程见
-`docs/CLAUDE_CODE_GUIDE.md`。独立 Agent：`agents/a2a/`。
+`docs/CLAUDE_CODE_GUIDE.md`，Cursor 教程见 `docs/CURSOR_GUIDE.md`。独立 Agent：
+`agents/a2a/`。

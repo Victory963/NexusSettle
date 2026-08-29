@@ -1,0 +1,19 @@
+---
+description: Enforce A2A stablecoin identity, protocol, and settlement boundaries
+globs: "{app/api/clearing/**,lib/clearing/**,agents/a2a/**,db/migrations/**,proxy.ts}"
+alwaysApply: false
+---
+
+# A2A payment safety
+
+- Read `docs/BEGINNER_SETUP.md`, `docs/TESTNET_RUNBOOK.md`, and the nearest `AGENTS.md`.
+- Read installed Next.js docs before changing route or proxy conventions.
+- Keep demo, testnet, and mainnet as separate trust domains.
+- Give the LLM a URL-only tool. Deterministic code owns payer binding, merchant, canonical token,
+  amount, task budget, network, validity window, nonce, and idempotency.
+- Use CAIP-2 network IDs. Never trust a token symbol or transaction hash by itself.
+- Synthetic receipts/signatures may unlock only `/api/clearing/demo/*`.
+- Testnet/mainnet settlement requires PostgreSQL and official facilitator verification.
+- Never read, print, request, generate, or commit wallet/API secrets.
+- Keep `CLEARING_MAINNET_ENABLED=false` during A-stage work.
+- If infrastructure is missing, preserve the 503 fail-closed behavior.

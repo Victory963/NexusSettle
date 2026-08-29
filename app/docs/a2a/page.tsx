@@ -11,7 +11,10 @@ export default function A2ADocsPage() {
         <Link className="ml-1 text-amber-200" href="/clearing">
           清算台
         </Link>
-        。
+        。三套新手入口共用同一清算核心：Codex 读 <code>AGENTS.md</code> 与
+        <code>docs/BEGINNER_SETUP.md</code>；Claude Code 读 <code>CLAUDE.md</code> 与
+        <code>docs/CLAUDE_CODE_GUIDE.md</code>；Cursor 读 <code>.cursor/rules/</code> 与
+        <code>docs/CURSOR_GUIDE.md</code>。
       </p>
       {SOURCES.map((section) => (
         <section key={section.title} className="mt-12">

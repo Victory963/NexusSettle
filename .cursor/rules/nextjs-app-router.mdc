@@ -1,0 +1,15 @@
+---
+description: Next.js 16 App Router conventions for this repo
+globs: app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Next.js 16
+
+This is not the Next.js in most training data. Read `node_modules/next/dist/docs/` before
+changing App Router APIs.
+
+- Route handlers live in `app/**/route.ts` and export `GET`/`POST`/…
+- Edge auth uses `proxy.ts`, not the deprecated `middleware.ts` file
+- Keep server-only modules (`lib/server/**`, env secrets) out of `"use client"` files
+- Prefer `NextResponse.json` for API errors and status codes
