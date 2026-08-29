@@ -12,7 +12,9 @@
     "test:clearing:http": "tsx scripts/run-clearing-http-tests.ts",
     "test:clearing:auth": "tsx scripts/run-clearing-auth-tests.ts",
     "test:clearing:postgres": "tsx scripts/run-clearing-postgres-tests.ts",
+    "check:clearing-config": "tsx scripts/check-clearing-config.ts",
     "db:clearing:migrate": "tsx scripts/migrate-clearing.ts",
+    "agent:demo": "npm --prefix agents/a2a/typescript run demo",
     "agent:cdp:x402": "npm --prefix agents/a2a/typescript run pay --",
     "agent:cdp:typecheck": "npm --prefix agents/a2a/typescript run typecheck"
   },

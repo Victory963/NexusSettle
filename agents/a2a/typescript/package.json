@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "demo": "tsx agent.ts",
     "pay": "tsx cdp-x402-client.ts",
     "typecheck": "tsc --noEmit"
   },

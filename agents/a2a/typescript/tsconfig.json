@@ -8,6 +8,8 @@
   },
   "include": [
     "cdp-x402-client.ts",
+    "agent.ts",
+    "guardrails.ts",
     "../../../lib/clearing/auth.ts",
     "../../../lib/clearing/assets.ts",
     "../../../lib/clearing/types.ts"

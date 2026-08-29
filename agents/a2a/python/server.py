@@ -1,7 +1,7 @@
-"""x402-style USDC/USDT merchant: 402 challenge + Transfer-event verification.
+"""Educational receipt verifier, not the production x402 server.
 
 Run:  python agents/a2a/python/server.py
-Env:  RPC_URL, MERCHANT_ADDRESS, USDC_CONTRACT (optional; defaults Base Sepolia USDC)
+Env:  RPC_URL, MERCHANT_ADDRESS, PAYER_ADDRESS
 """
 
 from __future__ import annotations
@@ -41,10 +41,13 @@ def fetch_receipt(rpc: str, tx_hash: str) -> dict[str, Any]:
     return payload.get("result") or {}
 
 
-def verify_usdc_transfer(receipt: dict[str, Any], token: str, pay_to: str, amount: int) -> bool:
+def verify_usdc_transfer(
+    receipt: dict[str, Any], token: str, payer: str, pay_to: str, amount: int
+) -> bool:
     if int(receipt.get("status") or "0x0", 16) != 1:
         return False
     token = checksum(token)
+    payer = checksum(payer)
     pay_to = checksum(pay_to)
     for log in receipt.get("logs") or []:
         topics = [t.lower() for t in log.get("topics") or []]
@@ -54,13 +57,18 @@ def verify_usdc_transfer(receipt: dict[str, Any], token: str, pay_to: str, amoun
             continue
         if len(topics) < 3:
             continue
-        if topic_addr(topics[2]) == pay_to and data_uint(log.get("data") or "0x0") >= amount:
+        if (
+            topic_addr(topics[1]) == payer
+            and topic_addr(topics[2]) == pay_to
+            and data_uint(log.get("data") or "0x0") == amount
+        ):
             return True
     return False
 
 
 class Handler(BaseHTTPRequestHandler):
-    merchant = checksum(os.getenv("MERCHANT_ADDRESS", "0x71C7656EC7ab88b098defB751B7401B5f6d8976F"))
+    merchant = checksum(os.getenv("MERCHANT_ADDRESS", ""))
+    payer = checksum(os.getenv("PAYER_ADDRESS", ""))
     token = checksum(os.getenv("USDC_CONTRACT", USDC_BASE_SEPOLIA))
     rpc = os.getenv("RPC_URL", "")
 
@@ -81,6 +89,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.split("?")[0] != "/api/v1/intel":
             self._json(404, {"error": "not found"})
             return
+        if not self.rpc or not self.merchant or not self.payer:
+            self._json(
+                503,
+                {"error": "RPC_URL, MERCHANT_ADDRESS, and PAYER_ADDRESS are required"},
+            )
+            return
         tx_hash = self.headers.get("X-402-Tx-Hash")
         if not tx_hash:
             self._json(
@@ -90,19 +104,21 @@ class Handler(BaseHTTPRequestHandler):
                     "X-402-Pay-To": self.merchant,
                     "X-402-Amount-Token": str(PRICE),
                     "X-402-Asset-Id": "usdc",
-                    "X-402-Network": "base-sepolia",
+                    "X-402-Network": "eip155:84532",
                     "X-402-Token": self.token,
                 },
             )
             return
+        if len(tx_hash) != 66 or not tx_hash.startswith("0x"):
+            self._json(400, {"error": "Malformed transaction hash"})
+            return
         if tx_hash in CONSUMED:
             self._json(400, {"error": "Tx Hash already consumed"})
             return
-        if self.rpc:
-            receipt = fetch_receipt(self.rpc, tx_hash)
-            if not verify_usdc_transfer(receipt, self.token, self.merchant, PRICE):
-                self._json(400, {"error": "Invalid USDC transfer event"})
-                return
+        receipt = fetch_receipt(self.rpc, tx_hash)
+        if not verify_usdc_transfer(receipt, self.token, self.payer, self.merchant, PRICE):
+            self._json(400, {"error": "Invalid USDC transfer event"})
+            return
         CONSUMED.add(tx_hash)
         self._json(
             200,
@@ -110,7 +126,7 @@ class Handler(BaseHTTPRequestHandler):
                 "status": "success",
                 "data": "Outcome-based pricing market trends: USDC-pinned Transfer logs, not ETH value.",
                 "verified_by_tx": tx_hash,
-                "onchain": bool(self.rpc),
+                "onchain": True,
             },
         )
 

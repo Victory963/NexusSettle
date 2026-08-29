@@ -15,4 +15,6 @@ http://localhost:3000
 
 ## Agent-to-Agent 稳定币清算
 
-USDC / USDT 双轨、HTTP 402、策略沙箱与结果托管：`/clearing`。开源协议与架构：`docs/A2A_CLEARING.md`、`/docs/a2a`。独立 Demo：`agents/a2a/`。
+USDC / USDT 双轨、HTTP 402、策略沙箱与结果托管：`/clearing`。第一次运行请从
+`docs/BEGINNER_SETUP.md` 开始；测试网运维见 `docs/TESTNET_RUNBOOK.md`；协议与架构见
+`docs/A2A_CLEARING.md`、`/docs/a2a`。独立 Agent：`agents/a2a/`。

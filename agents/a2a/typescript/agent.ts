@@ -1,10 +1,10 @@
 /**
- * Agent client: x402 consume + policy sandbox.
- * Production: swap `simulatedPay` for CdpEvmWalletProvider (see cdp-wallet.adapter.ts).
+ * Credential-free demo client. It cannot call the testnet or mainnet route.
+ * Use cdp-x402-client.ts for real Base Sepolia settlement.
  *
- *   npx --yes tsx agents/a2a/typescript/agent.ts
+ *   npx --prefix agents/a2a/typescript exec tsx agent.ts
  */
-import { fetchPaid, type SessionKeyPolicy, type SpendState } from "./guardrails";
+import { fetchDemoPaid, type SessionKeyPolicy, type SpendState } from "./guardrails";
 
 const BASE = process.env.CLEARING_URL ?? "http://127.0.0.1:3000";
 
@@ -21,14 +21,19 @@ const policy: SessionKeyPolicy = {
   maxPaysPerMerchant: 1,
 };
 
-async function simulatedPay() {
-  return `0x${crypto.randomUUID().replace(/-/g, "")}`;
-}
-
 async function main() {
   const spend: SpendState = { spent: 0n, pays: new Map() };
-  const url = `${BASE}/api/clearing/intel?asset=usdc`;
-  const data = await fetchPaid(url, policy, spend, simulatedPay);
+  const url = `${BASE}/api/clearing/demo/intel?asset=usdc`;
+  const data = await fetchDemoPaid(url, policy, spend, async () => {
+    const now = Math.floor(Date.now() / 1000);
+    return {
+      signature: `0x${"00".repeat(65)}`,
+      from: "0xab5801a7d398351b8be11c439e05c5b3259aec9b",
+      nonce: `0x${crypto.randomUUID().replace(/-/g, "").padEnd(64, "0")}`,
+      validAfter: String(now - 5),
+      validBefore: String(now + 60),
+    };
+  });
   console.log(JSON.stringify({ data, spentAtomic: spend.spent.toString() }, null, 2));
 }
 

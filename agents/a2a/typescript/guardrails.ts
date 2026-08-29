@@ -1,13 +1,21 @@
-/**
- * Deterministic payment sandbox. The model only ever receives a URL.
- * Payee, amount, and token are taken from HTTP 402 headers, never from LLM arguments.
- */
+/** Deterministic policy sandbox for the credential-free demo rail only. */
+type AcceptedPayment = {
+  scheme: string;
+  network: string;
+  amount: string;
+  asset: string;
+  payTo: string;
+  maxTimeoutSeconds: number;
+  extra?: Record<string, unknown>;
+};
+
 export type Requirement = {
   payTo: string;
   amountAtomic: bigint;
   asset: "usdc" | "usdt";
   token: string;
   network: string;
+  accepted: AcceptedPayment;
 };
 
 export type SessionKeyPolicy = {
@@ -21,22 +29,35 @@ export type SessionKeyPolicy = {
 };
 
 export type SpendState = { spent: bigint; pays: Map<string, number> };
+export type DemoAuthorization = {
+  signature: string;
+  from: `0x${string}`;
+  nonce: string;
+  validAfter: string;
+  validBefore: string;
+};
 
 const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 export function parse402(headers: Headers): Requirement | null {
-  const payTo = headers.get("x-402-pay-to");
-  const amount = headers.get("x-402-amount-token");
-  const asset = (headers.get("x-402-asset-id") || "usdc").toLowerCase();
-  const token = headers.get("x-402-token") || "";
-  const network = headers.get("x-402-network") || "";
-  if (!payTo || !amount) return null;
+  const encoded = headers.get("PAYMENT-REQUIRED");
+  if (!encoded) return null;
+  let accepted: AcceptedPayment;
+  try {
+    const decoded = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+    accepted = decoded.accepts?.[0] as AcceptedPayment;
+  } catch {
+    return null;
+  }
+  if (!accepted?.payTo || !accepted.amount || !accepted.asset || !accepted.network) return null;
+  const name = String(accepted.extra?.name ?? "USDC").toLowerCase();
   return {
-    payTo,
-    amountAtomic: BigInt(amount),
-    asset: asset === "usdt" ? "usdt" : "usdc",
-    token,
-    network,
+    payTo: accepted.payTo,
+    amountAtomic: BigInt(accepted.amount),
+    asset: name === "usdt" ? "usdt" : "usdc",
+    token: accepted.asset,
+    network: accepted.network,
+    accepted,
   };
 }
 
@@ -52,7 +73,15 @@ export function assertPolicy(policy: SessionKeyPolicy, req: Requirement, spend: 
   return null;
 }
 
-export async function fetchPaid(url: string, policy: SessionKeyPolicy, spend: SpendState, pay: (req: Requirement) => Promise<string>) {
+export async function fetchDemoPaid(
+  url: string,
+  policy: SessionKeyPolicy,
+  spend: SpendState,
+  authorize: (req: Requirement) => Promise<DemoAuthorization>,
+) {
+  if (!new URL(url).pathname.startsWith("/api/clearing/demo/")) {
+    throw new Error("Synthetic authorization is restricted to the explicit demo route");
+  }
   const first = await fetch(url);
   if (first.status === 200) return await first.json();
   if (first.status !== 402) throw new Error(`HTTP ${first.status}`);
@@ -60,10 +89,34 @@ export async function fetchPaid(url: string, policy: SessionKeyPolicy, spend: Sp
   if (!req) throw new Error("Malformed 402");
   const blocked = assertPolicy(policy, req, spend);
   if (blocked) throw new Error(blocked);
-  const txHash = await pay(req);
+  const authorization = await authorize(req);
+  const paymentIdentifier = crypto.randomUUID();
+  const payload = {
+    x402Version: 2,
+    accepted: req.accepted,
+    payload: {
+      signature: authorization.signature,
+      authorization: {
+        from: authorization.from,
+        to: req.payTo,
+        value: req.amountAtomic.toString(),
+        validAfter: authorization.validAfter,
+        validBefore: authorization.validBefore,
+        nonce: authorization.nonce,
+      },
+    },
+    extensions: {},
+  };
+  const retry = await fetch(url, {
+    headers: {
+      "PAYMENT-SIGNATURE": Buffer.from(JSON.stringify(payload), "utf8").toString("base64"),
+      "X-Lumen-Agent-Id": "agent-buyer-research",
+      "X-Lumen-Task-Id": crypto.randomUUID(),
+      "Payment-Identifier": paymentIdentifier,
+    },
+  });
+  if (!retry.ok) throw new Error(`Paid retry failed: ${retry.status} ${await retry.text()}`);
   spend.spent += req.amountAtomic;
   spend.pays.set(req.payTo.toLowerCase(), (spend.pays.get(req.payTo.toLowerCase()) ?? 0) + 1);
-  const retry = await fetch(url, { headers: { "X-402-Tx-Hash": txHash } });
-  if (!retry.ok) throw new Error(`Paid retry failed: ${retry.status} ${await retry.text()}`);
   return await retry.json();
 }

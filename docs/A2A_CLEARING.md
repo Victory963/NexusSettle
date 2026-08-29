@@ -22,7 +22,8 @@
 2. **按合约钉死稳定币**：不认 ticker。假 USDC 合约的 `Transfer` 直接拒绝。USDC 与 USDT 双轨，精度 6。
 3. **三套 scheme**：`exact`（单次上链语义）、`batch-settlement`（先授权后聚合）、`outcome-escrow`（谓词哈希匹配才放款）。
 4. **KYA 轻量登记**：每个 Agent 绑定 owner DID、钱包、声誉，对应 ERC-8004 的登记形态，便于以后换成链上 registry。
-5. **x402 v2 头 + 兼容头**：同时发 `PAYMENT-REQUIRED` 与 `X-402-*`，方便现有脚本与 Foundation SDK 对齐。
+5. **官方 x402 v2 头**：只使用 `PAYMENT-REQUIRED`、`PAYMENT-SIGNATURE`、
+   `PAYMENT-RESPONSE`，网络统一为 CAIP-2，避免私有兼容头形成第二套协议。
 
 这不是上市主体本身：上市级支付机构还需要牌照、储备审计、Travel Rule、银行通道与独立托管。本仓库交付的是 **可审计的清算引擎 + 演示轨 + 开源对接面**，作为后续持牌结算层的控制面原型。
 

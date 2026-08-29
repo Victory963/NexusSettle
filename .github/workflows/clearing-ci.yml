@@ -41,6 +41,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm ci --prefix agents/a2a/typescript
+      - run: npm run check:clearing-config
       - run: npm run db:clearing:migrate
       - run: npm run test:clearing
       - run: npm run agent:cdp:typecheck
