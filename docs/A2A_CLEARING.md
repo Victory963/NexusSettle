@@ -37,8 +37,10 @@
 ## 生产接入（真链）
 
 - Facilitator：https://docs.x402.org/core-concepts/facilitator.md
-- AgentKit：`CdpEvmWalletProvider` / `CdpSmartWalletProvider`（见 `agents/a2a/typescript/cdp-wallet.adapter.ts`）
+- AgentKit：隔离客户端见 `agents/a2a/typescript/cdp-x402-client.ts`
 - Base Sepolia USDC：`0x036CbD53842c5426634e7929541eC2318f3dCF7e`
-- 切主网前必须换 facilitator、KYB、以及把 `simulated` 网络关闭。
+- 测试网缺少 PostgreSQL、商户地址或 facilitator 时 `/api/clearing/ready` 返回 503。
+- 切主网前必须换 facilitator、完成 KYB，并通过 C 阶段双人审批门禁。
 
 独立 Python / TypeScript Demo：`agents/a2a/`。
+可执行测试网步骤：[`TESTNET_RUNBOOK.md`](./TESTNET_RUNBOOK.md)。

@@ -7,23 +7,34 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:clearing": "npm run test:clearing:unit && npm run test:clearing:http",
-    "test:clearing:unit": "npx --yes tsx scripts/run-clearing-tests.ts",
-    "test:clearing:http": "npx --yes tsx scripts/run-clearing-http-tests.ts"
+    "test:clearing": "npm run test:clearing:unit && npm run test:clearing:http && npm run test:clearing:auth && npm run test:clearing:postgres",
+    "test:clearing:unit": "tsx scripts/run-clearing-tests.ts",
+    "test:clearing:http": "tsx scripts/run-clearing-http-tests.ts",
+    "test:clearing:auth": "tsx scripts/run-clearing-auth-tests.ts",
+    "test:clearing:postgres": "tsx scripts/run-clearing-postgres-tests.ts",
+    "db:clearing:migrate": "tsx scripts/migrate-clearing.ts",
+    "agent:cdp:x402": "npm --prefix agents/a2a/typescript run pay --",
+    "agent:cdp:typecheck": "npm --prefix agents/a2a/typescript run typecheck"
   },
   "dependencies": {
+    "@x402/core": "^2.24.0",
+    "@x402/evm": "^2.24.0",
+    "@x402/next": "^2.24.0",
     "next": "16.3.3",
+    "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

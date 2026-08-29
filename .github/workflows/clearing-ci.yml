@@ -1,0 +1,50 @@
+name: Clearing CI
+
+on:
+  pull_request:
+    paths:
+      - "app/api/clearing/**"
+      - "agents/a2a/**"
+      - "lib/clearing/**"
+      - "db/migrations/**"
+      - "scripts/**"
+      - "package*.json"
+      - ".github/workflows/clearing-ci.yml"
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: lumen
+          POSTGRES_USER: lumen
+          POSTGRES_PASSWORD: lumen-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lumen -d lumen"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      CLEARING_MODE: demo
+      DATABASE_URL: postgresql://lumen:lumen-ci@127.0.0.1:5432/lumen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix agents/a2a/typescript
+      - run: npm run db:clearing:migrate
+      - run: npm run test:clearing
+      - run: npm run agent:cdp:typecheck
+      - run: npm run lint
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=critical
+      - run: npm audit --prefix agents/a2a/typescript --omit=dev --audit-level=critical

@@ -6,23 +6,29 @@ import { ENGINES, GRADE_LABEL, JOIN_LABEL, STATUS_LABEL } from "@/lib/engines";
 import { estimateFactoryDays } from "@/lib/planner";
 import type { Project, Shot } from "@/lib/types";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function ProjectWorkspace({ id }: { id: string }) {
   const [project, setProject] = useState<Project | null>(null);
   const [tab, setTab] = useState<"play" | "board" | "queue" | "edit">("play");
   const [filter, setFilter] = useState("");
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const res = await fetch(`/api/projects/${id}`, { cache: "no-store" });
     if (res.ok) setProject(await res.json());
-  }
+  }, [id]);
 
   useEffect(() => {
-    refresh();
-    const t = setInterval(refresh, 900);
-    return () => clearInterval(t);
-  }, [id]);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void refresh();
+    });
+    const t = setInterval(() => void refresh(), 900);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, [refresh]);
 
   async function run() {
     await fetch(`/api/projects/${id}`, {
@@ -30,7 +36,7 @@ export function ProjectWorkspace({ id }: { id: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "run" }),
     });
-    refresh();
+    void refresh();
   }
 
   async function retry(shotId: string) {
@@ -39,10 +45,10 @@ export function ProjectWorkspace({ id }: { id: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "retry", shotId }),
     });
-    refresh();
+    void refresh();
   }
 
-  const shots = project?.plan.shots ?? [];
+  const shots = useMemo(() => project?.plan.shots ?? [], [project]);
   const passed = shots.filter((s) => s.status === "passed").length;
   const seconds = shots.reduce((a, s) => a + s.durationSec, 0);
   const filtered = useMemo(

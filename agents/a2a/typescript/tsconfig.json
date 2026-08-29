@@ -1,0 +1,16 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"]
+  },
+  "include": [
+    "cdp-x402-client.ts",
+    "../../../lib/clearing/auth.ts",
+    "../../../lib/clearing/assets.ts",
+    "../../../lib/clearing/types.ts"
+  ],
+  "exclude": ["node_modules"]
+}

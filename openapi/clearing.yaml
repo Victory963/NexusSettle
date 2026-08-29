@@ -1,0 +1,73 @@
+openapi: 3.1.0
+info:
+  title: Lumen Agent Clearing API
+  version: 0.2.0
+  description: x402 v2 testnet settlement API for KYA-bound AI agents.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/clearing/intel:
+    get:
+      summary: Purchase premium intelligence
+      parameters:
+        - in: query
+          name: asset
+          schema:
+            type: string
+            enum: [usdc, usdt]
+        - in: header
+          name: PAYMENT-SIGNATURE
+          schema: { type: string }
+        - in: header
+          name: X-Lumen-Agent-Id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Lumen-Timestamp
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Lumen-Auth-Nonce
+          required: true
+          schema: { type: string }
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            pattern: "^Lumen-HMAC [0-9a-f]{64}$"
+      responses:
+        "200":
+          description: Paid resource; PAYMENT-RESPONSE contains settlement proof.
+          headers:
+            PAYMENT-RESPONSE:
+              schema: { type: string }
+        "402":
+          description: Payment required; PAYMENT-REQUIRED contains x402 v2 requirements.
+          headers:
+            PAYMENT-REQUIRED:
+              schema: { type: string }
+        "401": { description: Missing or invalid agent HMAC signature. }
+        "403": { description: Payer is not bound to the authenticated agent. }
+        "409": { description: Authentication nonce replay. }
+        "429": { description: Per-agent rate limit exceeded. }
+        "503": { description: Durable database, facilitator, or credentials are unavailable. }
+  /api/clearing/demo/intel:
+    get:
+      summary: Explicitly simulated x402 flow
+      description: Available only when CLEARING_MODE=demo; never broadcasts a transaction.
+      responses:
+        "200": { description: Simulated payment accepted. }
+        "402": { description: Simulated payment challenge. }
+        "404": { description: Demo rail is disabled. }
+  /api/clearing/health:
+    get:
+      summary: Liveness and deterministic self-test
+      responses:
+        "200": { description: Process is live and core invariants pass. }
+  /api/clearing/ready:
+    get:
+      summary: Deployment readiness
+      responses:
+        "200": { description: Required dependencies are ready. }
+        "503": { description: One or more required dependencies are unavailable. }

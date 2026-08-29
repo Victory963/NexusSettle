@@ -83,7 +83,7 @@ check(
 const replay = await pay({ from: buyer, nonce, paymentId });
 check("HTTP rejects replay", replay.status === 409, String(replay.status));
 
-const live = await getLiveIntel();
+const live = await getLiveIntel(new Request("http://localhost/api/clearing/intel"));
 check("live route rejects synthetic settlement", live.status === 503, String(live.status));
 
 for (const result of results) {

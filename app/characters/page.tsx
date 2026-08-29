@@ -1,7 +1,7 @@
 "use client";
 
 import type { Character } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const CHECKS = [
   { key: "face" as const, title: "脸部特写 8–12 张", d: "正、3/4、侧、微俯、微笑 / 张嘴 / 闭眼", target: 10 },
@@ -15,14 +15,20 @@ export default function CharactersPage() {
   const [trigger, setTrigger] = useState("");
   const [msg, setMsg] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch("/api/characters", { cache: "no-store" });
     if (res.ok) setRows(await res.json());
-  }
+  }, []);
 
   useEffect(() => {
-    load();
-  }, []);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void load();
+    });
+    return () => {
+      active = false;
+    };
+  }, [load]);
 
   async function create() {
     setMsg("");
@@ -43,7 +49,7 @@ export default function CharactersPage() {
     }
     setName("");
     setTrigger("");
-    load();
+    void load();
   }
 
   return (
