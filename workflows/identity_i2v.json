@@ -1,0 +1,6 @@
+{
+  "name": "identity_i2v",
+  "productEngine": "Identity",
+  "purpose": "Lock character from first frame + character adapter. Frame bucket 4N+1.",
+  "nodes": []
+}
