@@ -36,13 +36,14 @@ export function parseTransferEvents(receipt: EvmReceipt): TransferEvent[] {
 /** Rejects lookalike tokens: contract address must match the canonical asset. */
 export function verifyStableTransfer(
   receipt: EvmReceipt,
-  expected: Pick<PaymentProof, "payTo" | "token" | "amountAtomic">,
+  expected: Pick<PaymentProof, "payer" | "payTo" | "token" | "amountAtomic">,
 ): { ok: true; event: TransferEvent } | { ok: false; reason: string } {
   if (receipt.status !== 1) return { ok: false, reason: "Transaction failed or unconfirmed" };
   const events = parseTransferEvents(receipt);
   const match = events.find(
     (e) =>
       sameAddr(e.token, expected.token) &&
+      sameAddr(e.from, expected.payer) &&
       sameAddr(e.to, expected.payTo) &&
       e.value >= BigInt(expected.amountAtomic),
   );

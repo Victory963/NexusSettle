@@ -21,6 +21,8 @@ export function loadClearing(): ClearingSnapshot {
     agents: raw.agents ?? [],
     policies: raw.policies ?? [],
     consumedTx: raw.consumedTx ?? [],
+    consumedNonces: raw.consumedNonces ?? [],
+    consumedPaymentIdentifiers: raw.consumedPaymentIdentifiers ?? [],
     ledger: raw.ledger ?? [],
     escrows: raw.escrows ?? [],
     batchVouchers: raw.batchVouchers ?? [],

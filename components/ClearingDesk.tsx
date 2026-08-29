@@ -51,7 +51,13 @@ export function ClearingDesk() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void refresh();
+    });
+    return () => {
+      active = false;
+    };
   }, [refresh]);
 
   async function simulate(scheme: "exact" | "batch-settlement" | "outcome-escrow", extra: Record<string, unknown> = {}) {
@@ -70,26 +76,63 @@ export function ClearingDesk() {
     }
   }
 
-  async function live402() {
+  async function demo402() {
     setBusy(true);
     try {
-      const first = await fetch(`/api/clearing/intel?asset=${asset}`);
+      const first = await fetch(`/api/clearing/demo/intel?asset=${asset}`);
       const challenge = await first.json();
       if (first.status !== 402) {
         setLog(JSON.stringify({ unexpected: first.status, challenge }, null, 2));
         return;
       }
-      const payTo = first.headers.get("X-402-Pay-To");
-      const amount = first.headers.get("X-402-Amount-Token");
-      const retry = await fetch(`/api/clearing/intel?asset=${asset}`, {
-        headers: { "X-402-Tx-Hash": `0x${crypto.randomUUID().replace(/-/g, "")}` },
+      const buyer = agents.find((agent) => agent.role === "buyer");
+      const accepted = challenge.accepts?.[0];
+      if (!buyer || !accepted) {
+        setLog("Demo buyer or payment requirement is missing.");
+        return;
+      }
+      const now = Math.floor(Date.now() / 1000);
+      const nonce = `0x${crypto.randomUUID().replace(/-/g, "").padEnd(64, "0")}`;
+      const paymentIdentifier = crypto.randomUUID();
+      const paymentPayload = {
+        x402Version: 2,
+        resource: challenge.resource,
+        accepted,
+        payload: {
+          signature: `0x${"00".repeat(65)}`,
+          authorization: {
+            from: buyer.wallet,
+            to: accepted.payTo,
+            value: accepted.amount,
+            validAfter: String(now - 5),
+            validBefore: String(now + 60),
+            nonce,
+          },
+        },
+        extensions: {},
+      };
+      const retry = await fetch(`/api/clearing/demo/intel?asset=${asset}`, {
+        headers: {
+          "PAYMENT-SIGNATURE": btoa(JSON.stringify(paymentPayload)),
+          "X-Lumen-Agent-Id": buyer.id,
+          "X-Lumen-Task-Id": crypto.randomUUID(),
+          "Payment-Identifier": paymentIdentifier,
+        },
       });
       const payload = await retry.json();
       setLog(
         JSON.stringify(
           {
-            step1: { status: first.status, payTo, amount, challenge },
-            step2: { status: retry.status, payload },
+            step1: {
+              status: first.status,
+              paymentRequired: first.headers.get("PAYMENT-REQUIRED"),
+              challenge,
+            },
+            step2: {
+              status: retry.status,
+              paymentResponse: retry.headers.get("PAYMENT-RESPONSE"),
+              payload,
+            },
           },
           null,
           2,
@@ -127,8 +170,8 @@ export function ClearingDesk() {
         <button disabled={busy} className="rounded-full border border-white/15 px-4 py-1.5 text-sm disabled:opacity-40" onClick={() => void simulate("outcome-escrow", { succeed: false })}>
           Outcome refund
         </button>
-        <button disabled={busy} className="rounded-full border border-amber-200/40 px-4 py-1.5 text-sm text-amber-100 disabled:opacity-40" onClick={() => void live402()}>
-          Live HTTP 402
+        <button disabled={busy} className="rounded-full border border-amber-200/40 px-4 py-1.5 text-sm text-amber-100 disabled:opacity-40" onClick={() => void demo402()}>
+          Demo HTTP 402
         </button>
       </div>
 

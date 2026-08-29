@@ -1,14 +1,16 @@
+import { createHash } from "crypto";
 import { checksum, tokenFor, toAtomic } from "./assets";
 import { encodeTransferLog, verifyStableTransfer } from "./erc20";
 import { lockEscrow, settleEscrow } from "./escrow";
 import { appendLedger, balances } from "./ledger";
-import { applySpend, emptySpend, evaluatePolicy } from "./policy";
+import { emptySpend, evaluatePolicy } from "./policy";
 import { paymentRequiredBody, x402Headers } from "./x402";
 import type {
   AgentCredential,
   ClearingSnapshot,
   EvmReceipt,
   HexAddress,
+  PaymentProof,
   PaymentRequirement,
   SessionPolicy,
   StableAsset,
@@ -21,7 +23,16 @@ const INTEL = {
 };
 
 export function emptyState(): ClearingSnapshot {
-  return { agents: [], policies: [], consumedTx: [], ledger: [], escrows: [], batchVouchers: [] };
+  return {
+    agents: [],
+    policies: [],
+    consumedTx: [],
+    consumedNonces: [],
+    consumedPaymentIdentifiers: [],
+    ledger: [],
+    escrows: [],
+    batchVouchers: [],
+  };
 }
 
 export function seedDemo(state: ClearingSnapshot) {
@@ -45,8 +56,8 @@ export function seedDemo(state: ClearingSnapshot) {
     reputation: 71,
   };
   state.agents.push(seller, buyer);
-  const usdc = tokenFor("simulated", "usdc");
-  const usdt = tokenFor("simulated", "usdt");
+  const usdc = tokenFor("eip155:31337", "usdc");
+  const usdt = tokenFor("eip155:31337", "usdt");
   const policy: SessionPolicy = {
     agentId: buyer.id,
     maxPerTx: toAtomic(0.5),
@@ -66,10 +77,10 @@ export function sellerRequirement(state: ClearingSnapshot, asset: StableAsset = 
   const seller = state.agents.find((a) => a.role === "seller")!;
   return {
     scheme: "exact",
-    network: "simulated",
+    network: "eip155:31337",
     asset,
     payTo: seller.wallet,
-    token: tokenFor("simulated", asset),
+    token: tokenFor("eip155:31337", asset),
     amountAtomic: DEMO_PRICE,
     resource: "/api/clearing/intel",
     description: "Premium market intelligence payload",
@@ -95,6 +106,7 @@ export function consumePayment(state: ClearingSnapshot, receipt: EvmReceipt, req
     return { ok: false as const, reason: "Tx hash already consumed" };
   }
   const verified = verifyStableTransfer(receipt, {
+    payer: parseTransferPayer(receipt),
     payTo: requirement.payTo,
     token: requirement.token,
     amountAtomic: requirement.amountAtomic,
@@ -104,36 +116,133 @@ export function consumePayment(state: ClearingSnapshot, receipt: EvmReceipt, req
   return { ok: true as const, event: verified.event };
 }
 
+function parseTransferPayer(receipt: EvmReceipt): HexAddress {
+  const topic = receipt.logs[0]?.topics[1]?.replace(/^0x/, "") ?? "";
+  return checksum(`0x${topic.slice(-40)}`);
+}
+
+export function deterministicDemoTxHash(nonce: string, paymentIdentifier: string): TxHash {
+  return `0x${createHash("sha256").update(`${nonce}:${paymentIdentifier}`).digest("hex")}`;
+}
+
+export function spendForTask(
+  state: ClearingSnapshot,
+  buyerId: string,
+  taskId: string,
+): ReturnType<typeof emptySpend> {
+  const spend = emptySpend();
+  for (const row of state.ledger) {
+    if (row.kind !== "transfer" || row.fromAgentId !== buyerId || row.taskId !== taskId) continue;
+    spend.spentAtomic = String(BigInt(spend.spentAtomic) + BigInt(row.amountAtomic));
+    const seller = state.agents.find((agent) => agent.id === row.toAgentId);
+    if (seller) {
+      const key = seller.wallet.toLowerCase();
+      spend.paysByMerchant[key] = (spend.paysByMerchant[key] ?? 0) + 1;
+    }
+  }
+  return spend;
+}
+
+export function settleAuthorizedPayment(input: {
+  state: ClearingSnapshot;
+  requirement: PaymentRequirement;
+  proof: PaymentProof;
+  receipt: EvmReceipt;
+}) {
+  const { state, requirement, proof, receipt } = input;
+  seedDemo(state);
+  const buyer = state.agents.find((agent) => agent.id === proof.agentId && agent.role === "buyer");
+  if (!buyer) return { ok: false as const, reason: "Unknown buyer agent" };
+  if (buyer.wallet.toLowerCase() !== proof.payer.toLowerCase()) {
+    return { ok: false as const, reason: "Payment payer does not match registered agent wallet" };
+  }
+  if (
+    proof.network !== requirement.network ||
+    proof.asset !== requirement.asset ||
+    proof.token.toLowerCase() !== requirement.token.toLowerCase() ||
+    proof.payTo.toLowerCase() !== requirement.payTo.toLowerCase() ||
+    proof.amountAtomic !== requirement.amountAtomic
+  ) {
+    return { ok: false as const, reason: "Payment authorization does not match challenge" };
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (proof.validAfter > now + 30 || proof.validBefore <= now) {
+    return { ok: false as const, reason: "Payment authorization is not currently valid" };
+  }
+  if (!proof.nonce || state.consumedNonces.includes(proof.nonce)) {
+    return { ok: false as const, reason: "Payment nonce already consumed" };
+  }
+  if (!proof.paymentIdentifier || state.consumedPaymentIdentifiers.includes(proof.paymentIdentifier)) {
+    return { ok: false as const, reason: "Payment identifier already consumed" };
+  }
+  const policy = state.policies.find((candidate) => candidate.agentId === buyer.id);
+  if (!policy) return { ok: false as const, reason: "No active session policy" };
+  const gate = evaluatePolicy({
+    policy: { ...policy, asset: requirement.asset },
+    requirement,
+    spend: spendForTask(state, buyer.id, proof.taskId),
+  });
+  if (!gate.ok) return gate;
+  const verified = verifyStableTransfer(receipt, proof);
+  if (!verified.ok) return verified;
+  if (state.consumedTx.includes(receipt.transactionHash)) {
+    return { ok: false as const, reason: "Tx hash already consumed" };
+  }
+
+  const seller = state.agents.find(
+    (agent) => agent.role === "seller" && agent.wallet.toLowerCase() === proof.payTo.toLowerCase(),
+  );
+  if (!seller) return { ok: false as const, reason: "Unknown seller agent" };
+
+  state.consumedTx.push(receipt.transactionHash);
+  state.consumedNonces.push(proof.nonce);
+  state.consumedPaymentIdentifiers.push(proof.paymentIdentifier);
+  const entry = appendLedger(state, {
+    kind: "transfer",
+    fromAgentId: buyer.id,
+    toAgentId: seller.id,
+    asset: requirement.asset,
+    amountAtomic: requirement.amountAtomic,
+    txHash: receipt.transactionHash,
+    resource: requirement.resource,
+    note: "Policy-authorized x402 payment",
+    taskId: proof.taskId,
+    paymentIdentifier: proof.paymentIdentifier,
+  });
+  return { ok: true as const, entry, buyer, seller, event: verified.event };
+}
+
 export function runExactA2A(state: ClearingSnapshot, asset: StableAsset = "usdc") {
   seedDemo(state);
   const buyer = state.agents.find((a) => a.role === "buyer")!;
-  const seller = state.agents.find((a) => a.role === "seller")!;
-  const policy = state.policies.find((p) => p.agentId === buyer.id)!;
   const requirement = sellerRequirement(state, asset);
-  const spend = emptySpend();
-  const gate = evaluatePolicy({ policy: { ...policy, asset }, requirement, spend });
-  if (!gate.ok) {
-    return { ok: false as const, step: "guardrail", reason: gate.reason, requirement };
-  }
+  const nonce = `0x${crypto.randomUUID().replace(/-/g, "").padEnd(64, "0")}`;
+  const paymentIdentifier = crypto.randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+  const proof: PaymentProof = {
+    txHash: deterministicDemoTxHash(nonce, paymentIdentifier),
+    agentId: buyer.id,
+    taskId: crypto.randomUUID(),
+    paymentIdentifier,
+    nonce,
+    validAfter: now - 5,
+    validBefore: now + 60,
+    payer: buyer.wallet,
+    payTo: requirement.payTo,
+    token: requirement.token,
+    amountAtomic: requirement.amountAtomic,
+    asset,
+    network: requirement.network,
+  };
   const receipt = simulateReceipt({
     token: requirement.token,
     from: buyer.wallet,
     to: requirement.payTo,
     amountAtomic: requirement.amountAtomic,
+    txHash: proof.txHash,
   });
-  const paid = consumePayment(state, receipt, requirement);
+  const paid = settleAuthorizedPayment({ state, requirement, proof, receipt });
   if (!paid.ok) return { ok: false as const, step: "settlement", reason: paid.reason, requirement };
-  applySpend(spend, requirement.payTo, requirement.amountAtomic);
-  const entry = appendLedger(state, {
-    kind: "transfer",
-    fromAgentId: buyer.id,
-    toAgentId: seller.id,
-    asset,
-    amountAtomic: requirement.amountAtomic,
-    txHash: receipt.transactionHash,
-    resource: requirement.resource,
-    note: "x402 exact scheme — USDC/USDT Transfer event verified against canonical contract",
-  });
   return {
     ok: true as const,
     scheme: "exact" as const,
@@ -141,7 +250,7 @@ export function runExactA2A(state: ClearingSnapshot, asset: StableAsset = "usdc"
     headers: x402Headers(requirement),
     challenge: paymentRequiredBody(requirement),
     txHash: receipt.transactionHash,
-    ledger: entry,
+    ledger: paid.entry,
     payload: { ...INTEL, verifiedBy: receipt.transactionHash },
     balances: balances(state),
   };

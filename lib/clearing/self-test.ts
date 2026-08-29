@@ -1,7 +1,19 @@
 import { tokenFor, toAtomic } from "./assets";
 import { verifyStableTransfer } from "./erc20";
-import { emptyState, rejectFakeToken, rejectPromptInjectionPayee, runExactA2A, runOutcomeA2A, simulateReceipt } from "./orchestrator";
+import {
+  deterministicDemoTxHash,
+  emptyState,
+  rejectFakeToken,
+  rejectPromptInjectionPayee,
+  runExactA2A,
+  runOutcomeA2A,
+  seedDemo,
+  sellerRequirement,
+  settleAuthorizedPayment,
+  simulateReceipt,
+} from "./orchestrator";
 import { emptySpend, evaluatePolicy } from "./policy";
+import type { PaymentProof } from "./types";
 
 export type TestResult = { name: string; pass: boolean; detail: string };
 
@@ -29,14 +41,15 @@ export function runClearingSelfTests(): TestResult[] {
 
   const underpay = verifyStableTransfer(
     simulateReceipt({
-      token: tokenFor("simulated", "usdc"),
+      token: tokenFor("eip155:31337", "usdc"),
       from: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
       to: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
       amountAtomic: toAtomic(0.01),
     }),
     {
+      payer: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
       payTo: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-      token: tokenFor("simulated", "usdc"),
+      token: tokenFor("eip155:31337", "usdc"),
       amountAtomic: toAtomic(0.05),
     },
   );
@@ -49,7 +62,7 @@ export function runClearingSelfTests(): TestResult[] {
       maxPerTask: toAtomic(1),
       asset: "usdc",
       merchantWhitelist: ["0x71C7656EC7ab88b098defB751B7401B5f6d8976F"],
-      allowedContracts: [tokenFor("simulated", "usdc")],
+      allowedContracts: [tokenFor("eip155:31337", "usdc")],
       validUntil: 1,
       maxPaysPerMerchant: 1,
     },
@@ -57,10 +70,10 @@ export function runClearingSelfTests(): TestResult[] {
       ? runExactA2A(emptyState()).requirement
       : {
           scheme: "exact",
-          network: "simulated",
+          network: "eip155:31337",
           asset: "usdc",
           payTo: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-          token: tokenFor("simulated", "usdc"),
+          token: tokenFor("eip155:31337", "usdc"),
           amountAtomic: toAtomic(0.05),
           resource: "/",
           description: "",
@@ -69,6 +82,70 @@ export function runClearingSelfTests(): TestResult[] {
     now: Date.now(),
   });
   check("reject expired session key", expired.ok === false, expired.ok ? "expired allowed" : expired.reason);
+
+  const authorizedState = seedDemo(emptyState());
+  const requirement = sellerRequirement(authorizedState);
+  const buyer = authorizedState.agents.find((agent) => agent.role === "buyer")!;
+  const now = Math.floor(Date.now() / 1000);
+  const baseProof: PaymentProof = {
+    txHash: deterministicDemoTxHash("nonce-1", "payment-1"),
+    agentId: buyer.id,
+    taskId: "task-1",
+    paymentIdentifier: "payment-1",
+    nonce: "nonce-1",
+    validAfter: now - 5,
+    validBefore: now + 60,
+    payer: buyer.wallet,
+    payTo: requirement.payTo,
+    token: requirement.token,
+    amountAtomic: requirement.amountAtomic,
+    asset: requirement.asset,
+    network: requirement.network,
+  };
+  const authorizedReceipt = simulateReceipt({
+    token: baseProof.token,
+    from: baseProof.payer,
+    to: baseProof.payTo,
+    amountAtomic: baseProof.amountAtomic,
+    txHash: baseProof.txHash,
+  });
+  const authorized = settleAuthorizedPayment({
+    state: authorizedState,
+    requirement,
+    proof: baseProof,
+    receipt: authorizedReceipt,
+  });
+  check("authorized payment settles", authorized.ok, authorized.ok ? authorized.entry.txHash : authorized.reason);
+
+  const replay = settleAuthorizedPayment({
+    state: authorizedState,
+    requirement,
+    proof: baseProof,
+    receipt: authorizedReceipt,
+  });
+  check("reject nonce replay", !replay.ok, replay.ok ? "replay accepted" : replay.reason);
+
+  const wrongPayerState = seedDemo(emptyState());
+  const wrongPayerProof: PaymentProof = {
+    ...baseProof,
+    txHash: deterministicDemoTxHash("nonce-2", "payment-2"),
+    nonce: "nonce-2",
+    paymentIdentifier: "payment-2",
+    payer: "0x000000000000000000000000000000000000dEaD",
+  };
+  const wrongPayer = settleAuthorizedPayment({
+    state: wrongPayerState,
+    requirement: sellerRequirement(wrongPayerState),
+    proof: wrongPayerProof,
+    receipt: simulateReceipt({
+      token: wrongPayerProof.token,
+      from: wrongPayerProof.payer,
+      to: wrongPayerProof.payTo,
+      amountAtomic: wrongPayerProof.amountAtomic,
+      txHash: wrongPayerProof.txHash,
+    }),
+  });
+  check("reject wrong payer", !wrongPayer.ok, wrongPayer.ok ? "wrong payer accepted" : wrongPayer.reason);
 
   return results;
 }

@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:clearing": "npx --yes tsx scripts/run-clearing-tests.ts"
+    "test:clearing": "npm run test:clearing:unit && npm run test:clearing:http",
+    "test:clearing:unit": "npx --yes tsx scripts/run-clearing-tests.ts",
+    "test:clearing:http": "npx --yes tsx scripts/run-clearing-http-tests.ts"
   },
   "dependencies": {
     "next": "16.3.3",

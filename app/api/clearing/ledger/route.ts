@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadClearing, saveClearing } from "@/lib/clearing/store";
+import { loadClearing } from "@/lib/clearing/store";
 import { balances } from "@/lib/clearing/ledger";
 
 export async function GET() {

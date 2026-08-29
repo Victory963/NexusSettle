@@ -1,7 +1,8 @@
 export type StableAsset = "usdc" | "usdt";
-export type NetworkId = "base-sepolia" | "base-mainnet" | "simulated";
+export type NetworkId = "eip155:31337" | "eip155:84532" | "eip155:2201" | "eip155:8453";
 export type PaymentScheme = "exact" | "upto" | "batch-settlement" | "outcome-escrow";
 export type AgentRole = "buyer" | "seller" | "facilitator";
+export type ClearingMode = "demo" | "testnet" | "mainnet";
 
 export type HexAddress = `0x${string}`;
 export type TxHash = `0x${string}`;
@@ -40,6 +41,12 @@ export type PaymentRequirement = {
 
 export type PaymentProof = {
   txHash: TxHash;
+  agentId: string;
+  taskId: string;
+  paymentIdentifier: string;
+  nonce: string;
+  validAfter: number;
+  validBefore: number;
   payer: HexAddress;
   payTo: HexAddress;
   token: HexAddress;
@@ -71,6 +78,8 @@ export type LedgerEntry = {
   txHash: TxHash;
   resource: string;
   note: string;
+  taskId?: string;
+  paymentIdentifier?: string;
 };
 
 export type EscrowDeal = {
@@ -89,6 +98,8 @@ export type ClearingSnapshot = {
   agents: AgentCredential[];
   policies: SessionPolicy[];
   consumedTx: TxHash[];
+  consumedNonces: string[];
+  consumedPaymentIdentifiers: string[];
   ledger: LedgerEntry[];
   escrows: EscrowDeal[];
   batchVouchers: BatchVoucher[];

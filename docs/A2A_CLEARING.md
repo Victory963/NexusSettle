@@ -28,11 +28,11 @@
 
 ## 端到端（Exact）
 
-1. Buyer GET `/api/clearing/intel` → **402** + 账单。
+1. Buyer GET `/api/clearing/demo/intel` → **402** + x402 v2 `PAYMENT-REQUIRED`。
 2. Guardrail：商户白名单、token allowlist、单笔/任务预算、每商户支付次数。
-3. 钱包适配器广播 USDC/USDT `transfer`（演示轨合成收据；生产轨用 CDP / viem 拉真收据）。
+3. 演示轨只在 `CLEARING_MODE=demo` 下合成收据；`/api/clearing/intel` 不接受随机 tx hash，测试网/主网必须走 facilitator。
 4. Seller 解析 log topic `Transfer(address,address,uint256)`，校验 `address == canonical token`。
-5. 200 + payload；txHash 记入防重放集合与复式流水。
+5. 200 + `PAYMENT-RESPONSE`；txHash、nonce 与 Payment-Identifier 同时记入防重放集合和复式流水。
 
 ## 生产接入（真链）
 
