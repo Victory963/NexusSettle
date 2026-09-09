@@ -2,6 +2,7 @@
 paths:
   - "app/api/clearing/**/*"
   - "lib/clearing/**/*"
+  - "lib/nexus/**/*"
   - "agents/a2a/**/*"
   - "db/migrations/**/*"
   - "proxy.ts"
@@ -23,6 +24,7 @@ editing these paths.
 - Never expose secrets in code, diffs, logs, prompts, test fixtures, or screenshots.
 - Do not change `CLEARING_MAINNET_ENABLED` during A-stage work.
 - Add negative tests before relaxing any guardrail.
+- Card/FX code may emit paper quotes only. Never mark them executable.
 - Run the same acceptance sequence used by CI:
-  `npm run check:clearing-config`, `npm run test:clearing`,
+  `npm run check:clearing-config`, `npm run test:nexus`, `npm run test:clearing`,
   `npm run agent:cdp:typecheck`, `npm run lint`, `npm run build`.

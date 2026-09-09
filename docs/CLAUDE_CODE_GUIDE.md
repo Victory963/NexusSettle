@@ -2,7 +2,7 @@
 
 Claude Code and Codex use the same implementation, commands, and acceptance evidence. The only
 difference is how project instructions are loaded: Claude reads `CLAUDE.md`,
-`.claude/rules/a2a-payments.md`, and the `/a2a-clearing` skill.
+`.claude/rules/a2a-payments.md`, the `/a2a-clearing` skill, and `/nexus-settle` for journal or card quotes.
 
 ## First session
 

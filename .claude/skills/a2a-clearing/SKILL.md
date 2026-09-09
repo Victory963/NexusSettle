@@ -23,9 +23,10 @@ Read:
 
 1. `docs/BEGINNER_SETUP.md`
 2. `docs/A2A_CLEARING.md`
-3. `docs/TESTNET_RUNBOOK.md`
-4. nearest `AGENTS.md`
-5. installed Next.js docs before changing route/proxy code
+3. `docs/NEXUS_SETTLE.md`
+4. `docs/TESTNET_RUNBOOK.md`
+5. nearest `AGENTS.md`
+6. installed Next.js docs before changing route/proxy code
 
 ## 3. Preserve invariants
 

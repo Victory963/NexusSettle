@@ -1,6 +1,6 @@
 ---
 description: A2A clearing intent/execution split and fail-closed rails
-globs: "{lib/clearing/**,app/api/clearing/**,agents/a2a/**,proxy.ts}"
+globs: "{lib/clearing/**,lib/nexus/**,app/api/clearing/**,agents/a2a/**,proxy.ts}"
 alwaysApply: false
 ---
 
@@ -13,5 +13,6 @@ task budget, nonce, and idempotency.
 - Testnet: PostgreSQL + HMAC + official facilitator verify/settle
 - Mainnet: gated release; public `x402.org` facilitator is forbidden
 - Never trust a ticker. Pin CAIP-2 + canonical contract
-- After changes: `npm run test:clearing` and report skipped postgres tests
+- Card/FX quotes are paper-only and never include PAN
+- After changes: `npm run test:nexus` and `npm run test:clearing`; report skipped postgres tests
 See `docs/CURSOR_GUIDE.md` and `.cursor/rules/a2a-payment-verification.mdc`.

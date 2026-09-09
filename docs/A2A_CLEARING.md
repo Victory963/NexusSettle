@@ -45,3 +45,5 @@
 
 独立 Python / TypeScript Demo：`agents/a2a/`。
 可执行测试网步骤：[`TESTNET_RUNBOOK.md`](./TESTNET_RUNBOOK.md)。
+NEXUS-SETTLE 净额与卡轨：[`NEXUS_SETTLE.md`](./NEXUS_SETTLE.md)。
+Codex：[`CODEX_GUIDE.md`](./CODEX_GUIDE.md)。

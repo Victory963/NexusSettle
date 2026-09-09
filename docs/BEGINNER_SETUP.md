@@ -17,7 +17,8 @@ buyer agent
 ```
 
 The language model may choose a resource URL. It may not choose a payee, token contract, amount,
-network, nonce, or signing key.
+network, nonce, or signing key. NEXUS-SETTLE adds off-chain multilateral netting and paper
+Visa/Mastercard quotes; see `docs/NEXUS_SETTLE.md`. Those quotes are not executable.
 
 ## Prerequisites
 

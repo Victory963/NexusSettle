@@ -12,9 +12,9 @@ export default function A2ADocsPage() {
           清算台
         </Link>
         。三套新手入口共用同一清算核心：Codex 读 <code>AGENTS.md</code> 与
-        <code>docs/BEGINNER_SETUP.md</code>；Claude Code 读 <code>CLAUDE.md</code> 与
+        <code>docs/BEGINNER_SETUP.md</code>、<code>docs/CODEX_GUIDE.md</code>；Claude Code 读 <code>CLAUDE.md</code> 与
         <code>docs/CLAUDE_CODE_GUIDE.md</code>；Cursor 读 <code>.cursor/rules/</code> 与
-        <code>docs/CURSOR_GUIDE.md</code>。
+        <code>docs/CURSOR_GUIDE.md</code>。净额与卡轨见 <code>docs/NEXUS_SETTLE.md</code>。
       </p>
       {SOURCES.map((section) => (
         <section key={section.title} className="mt-12">

@@ -80,6 +80,28 @@ export function ClearingDesk() {
     }
   }
 
+  async function nexusWindow() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/clearing/demo/nexus/window", { method: "POST" });
+      const data = await res.json();
+      setLog(JSON.stringify(data, null, 2));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cardQuote() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/clearing/demo/nexus/quote?from=USDC&to=USD&amount=40000&partner=visa");
+      const data = await res.json();
+      setLog(JSON.stringify(data, null, 2));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function demo402() {
     setBusy(true);
     try {
@@ -188,6 +210,12 @@ export function ClearingDesk() {
         </button>
         <button disabled={busy} className="rounded-full border border-amber-200/40 px-4 py-1.5 text-sm text-amber-100 disabled:opacity-40" onClick={() => void demo402()}>
           Demo HTTP 402
+        </button>
+        <button disabled={busy} className="rounded-full border border-white/15 px-4 py-1.5 text-sm disabled:opacity-40" onClick={() => void nexusWindow()}>
+          Nexus net window
+        </button>
+        <button disabled={busy} className="rounded-full border border-white/15 px-4 py-1.5 text-sm disabled:opacity-40" onClick={() => void cardQuote()}>
+          Card quote
         </button>
       </div>
 
