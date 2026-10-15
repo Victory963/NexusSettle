@@ -1,6 +1,7 @@
 import { issueCardInstruction } from "./card-rail";
 import { quoteFx } from "./fx";
-import { authorizeIntent } from "./guardrail";
+import { tokenFor } from "../clearing/assets";
+import { authorizeIntent, supportsEip3009 } from "./guardrail";
 import { IntentReject, paymentIntentFromAcpSpt, paymentIntentFromAp2Mandate, paymentIntentFromX402 } from "./intent";
 import { emptyBook, findEntry, fundAccount, JournalReject, postTransfer } from "./journal";
 import { multilateralNet, settlementInstructions } from "./netting";
@@ -159,6 +160,24 @@ export function runNexusSelfTests(): TestResult[] {
     ctx({ eip3009: false }),
   );
   check("reject Base native USDT", baseUsdt.ok === false, baseUsdt.ok ? "accepted" : baseUsdt.reason);
+
+  const monadUsdt = authorizeIntent(
+    paymentIntentFromX402({
+      payerAgentId: NEXUS_DEMO_AGENTS.buyer,
+      payeeAgentId: NEXUS_DEMO_AGENTS.intel,
+      asset: "USDT",
+      amountAtomic: "1",
+      network: "eip155:143",
+      nonce: "usdt-monad",
+      resource: "/",
+    }),
+    ctx(),
+  );
+  check(
+    "reject Monad USDT",
+    monadUsdt.ok === false && supportsEip3009("USDC", "eip155:10143") && tokenFor("eip155:143", "usdc").toLowerCase() === "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+    monadUsdt.ok ? "accepted" : monadUsdt.reason,
+  );
 
   const injected = authorizeIntent(sampleX402(), ctx({ allowedPayees: ["someone-else"] }));
   check("reject payee outside allowlist", injected.ok === false, injected.ok ? "accepted" : injected.reason);

@@ -1,5 +1,11 @@
 export type StableAsset = "usdc" | "usdt";
-export type NetworkId = "eip155:31337" | "eip155:84532" | "eip155:2201" | "eip155:8453";
+export type NetworkId =
+  | "eip155:31337"
+  | "eip155:84532"
+  | "eip155:2201"
+  | "eip155:8453"
+  | "eip155:10143"
+  | "eip155:143";
 export type PaymentScheme = "exact" | "upto" | "batch-settlement" | "outcome-escrow";
 export type AgentRole = "buyer" | "seller" | "facilitator";
 export type ClearingMode = "demo" | "testnet" | "mainnet";

@@ -6,6 +6,8 @@ const EIP3009_CAPABLE = new Set<string>([
   "USDC:eip155:31337",
   "USDC:eip155:84532",
   "USDC:eip155:8453",
+  "USDC:eip155:10143",
+  "USDC:eip155:143",
   "USDT:eip155:31337",
   "USDT:eip155:42161",
 ]);
@@ -34,8 +36,8 @@ export function authorizeIntent(intent: PaymentIntent, ctx: IntentContext): Guar
       return { ok: false, reason: `${intent.asset} on ${intent.network} has no EIP-3009; refuse naive transfer` };
     }
   }
-  if (intent.asset === "USDT" && intent.network === "eip155:8453") {
-    return { ok: false, reason: "native USDT on Base has no EIP-3009; use USDT0 on a capable chain or USDC" };
+  if (intent.asset === "USDT" && (intent.network === "eip155:8453" || intent.network === "eip155:143" || intent.network === "eip155:10143")) {
+    return { ok: false, reason: "native USDT is not enabled on this chain; settle USDC" };
   }
   return { ok: true };
 }

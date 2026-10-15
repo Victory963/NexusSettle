@@ -16,6 +16,13 @@ export const TOKEN_REGISTRY: Record<NetworkId, Partial<Record<StableAsset, HexAd
     usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     usdt: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
   },
+  // Circle-issued native USDC. USDT is intentionally absent.
+  "eip155:10143": {
+    usdc: "0x534b2f3A21130d7a60830c2Df862319e593943A3",
+  },
+  "eip155:143": {
+    usdc: "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+  },
 };
 
 export const STABLE_DECIMALS = 6;
