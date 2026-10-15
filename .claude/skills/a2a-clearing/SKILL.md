@@ -1,11 +1,11 @@
 ---
 name: a2a-clearing
-description: Safely implement, test, or diagnose Lumen x402 USDC/USDT agent payments.
+description: Safely implement, test, or diagnose NexusSettle x402 USDC/USDT agent payments.
 argument-hint: "[demo|testnet|diagnose] [goal]"
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
-# Lumen A2A clearing workflow
+# NexusSettle A2A clearing workflow
 
 Use this skill when work touches x402 headers, stablecoin verification, AgentKit/CDP, KYA/HMAC,
 payment policy, PostgreSQL clearing, or the clearing dashboard.

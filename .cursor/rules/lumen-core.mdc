@@ -1,16 +1,14 @@
 ---
-description: Core Lumen Studio commands, docs, and global do-nots
+description: Core NexusSettle commands, docs, and global do-nots
 alwaysApply: true
 ---
 
-# Lumen Studio
+# NexusSettle
 
 Read `docs/BEGINNER_SETUP.md` before first-run work. Architecture: `docs/A2A_CLEARING.md`.
 Commands: `npm run check:clearing-config`, `npm run test:clearing`, `npm run lint`, `npm run build`.
 
 Do not:
 
-- Import `lib/server/adapters.ts` from client components
 - Commit `.env.local` or any wallet/API secret
-- Surface vendor model names in the film UI (use Identity, Cinema, Continuity, Drive)
 - Enable mainnet (`CLEARING_MAINNET_ENABLED`) during A-stage work

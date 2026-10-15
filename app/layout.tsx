@@ -16,8 +16,8 @@ const display = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Lumen Studio",
-  description: "提示词到长片：自动分镜、镜头生成、美工与硬切拼装。",
+  title: "NexusSettle",
+  description: "Agent 对 Agent 稳定币清算：复式记账、多边净额，只结算差额。",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

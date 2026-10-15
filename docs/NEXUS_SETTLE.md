@@ -1,6 +1,6 @@
 # NEXUS-SETTLE
 
-Lumen 的 Agent-to-Agent 清算控制面：官方 x402 v2 / EIP-3009 接入，链下复式记账 + 多边净额，再经持牌方做 Visa / Mastercard / ACP 兑换。本文件是工程真相源。上市级门槛在牌照与资本，不在再写一套 `X-402-Tx-Hash` 旁路。
+NexusSettle 的 Agent-to-Agent 清算控制面：官方 x402 v2 / EIP-3009 接入，链下复式记账 + 多边净额，再经持牌方做 Visa / Mastercard / ACP 兑换。本文件是工程真相源。上市级门槛在牌照与资本，不在再写一套 `X-402-Tx-Hash` 旁路。
 
 ## 对原始资料的纠正
 

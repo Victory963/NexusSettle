@@ -1,7 +1,7 @@
 # Mainnet release gate (phase C)
 
 This document is a **release control**, not a license, custody agreement, or financial audit.
-Shipping this code does not make Lumen a payment institution.
+Shipping this code does not make NexusSettle a payment institution.
 
 Default: `CLEARING_MODE=testnet` or `demo`, `CLEARING_MAINNET_ENABLED=false`.
 The public `https://x402.org/facilitator` path is **forbidden** on mainnet.

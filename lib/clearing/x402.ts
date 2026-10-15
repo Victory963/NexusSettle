@@ -99,7 +99,7 @@ export function paymentRequiredBody(
       url: resourceUrl,
       description: req.description,
       mimeType: "application/json",
-      serviceName: "Lumen Clearing",
+      serviceName: "NexusSettle",
       tags: ["a2a", "stablecoin"],
     },
     accepts: [toX402Requirement(req)],

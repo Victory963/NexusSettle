@@ -1,6 +1,0 @@
-{
-  "name": "continuity_flf",
-  "productEngine": "Continuity",
-  "purpose": "First-last frames, extend, multi-candidate short clips, optional native audio for teasers only.",
-  "nodes": []
-}

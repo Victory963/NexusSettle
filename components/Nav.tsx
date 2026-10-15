@@ -4,13 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/", label: "探索" },
-  { href: "/studio", label: "创作" },
-  { href: "/library", label: "片库" },
-  { href: "/characters", label: "角色" },
-  { href: "/adapters", label: "适配器" },
   { href: "/clearing", label: "清算" },
-  { href: "/settings", label: "工场" },
+  { href: "/docs/a2a", label: "卷宗" },
 ];
 
 export function Nav() {
@@ -20,13 +15,13 @@ export function Nav() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-3">
           <span className="grid h-8 w-8 place-items-center rounded-full bg-linear-to-br from-amber-200 to-rose-400 text-[11px] font-semibold text-black">
-            L
+            N
           </span>
-          <span className="font-[family-name:var(--font-display)] text-lg tracking-wide">Lumen Studio</span>
+          <span className="font-[family-name:var(--font-display)] text-lg tracking-wide">NexusSettle</span>
         </Link>
         <nav className="flex items-center gap-1 text-sm text-white/60">
           {links.map((l) => {
-            const on = l.href === "/" ? path === "/" : path.startsWith(l.href);
+            const on = path.startsWith(l.href);
             return (
               <Link
                 key={l.href}

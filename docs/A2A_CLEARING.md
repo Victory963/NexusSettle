@@ -1,4 +1,4 @@
-# A2A 稳定币清算栈（Lumen Clearing）
+# A2A 稳定币清算栈（NexusSettle）
 
 本模块把「链上数字美元」做成 **Agent-to-Agent 清算所**：买方 Agent 不持有主私钥、不把转账参数暴露给 LLM，只在确定性沙箱里应答 HTTP 402，并按 **USDC / USDT 合约地址** 校验 `Transfer` 事件。
 

@@ -11,5 +11,5 @@ changing App Router APIs.
 
 - Route handlers live in `app/**/route.ts` and export `GET`/`POST`/…
 - Edge auth uses `proxy.ts`, not the deprecated `middleware.ts` file
-- Keep server-only modules (`lib/server/**`, env secrets) out of `"use client"` files
+- Keep server-only modules and env secrets out of `"use client"` files
 - Prefer `NextResponse.json` for API errors and status codes

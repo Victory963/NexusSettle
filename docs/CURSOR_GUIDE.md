@@ -9,7 +9,6 @@ are open.
 | `lumen-core.mdc` | Every chat |
 | `nextjs-app-router.mdc` | `app/**` |
 | `clearing-security.mdc` plus `a2a-payment-*.mdc` | clearing / agents / `proxy.ts` |
-| `film-pipeline.mdc` | planner, engines, project APIs |
 
 ## Import the repo
 

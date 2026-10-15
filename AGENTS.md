@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Lumen A2A payment rules
+# NexusSettle A2A payment rules
 
 For changes under `app/api/clearing`, `lib/clearing`, `lib/nexus`, `agents/a2a`, `db`, or `proxy.ts`:
 
