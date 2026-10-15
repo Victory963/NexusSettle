@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ResourceClerk } from "@/components/ResourceClerk";
 
 export default function Home() {
   return (
@@ -19,6 +20,7 @@ export default function Home() {
           技术卷宗
         </Link>
       </div>
+      <ResourceClerk />
     </main>
   );
 }

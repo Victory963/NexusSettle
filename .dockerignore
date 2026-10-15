@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+npm-debug.log*
+agents/a2a/typescript/node_modules
+coverage
+.vercel

@@ -1,4 +1,5 @@
 import { issueCardInstruction } from "./card-rail";
+import { assertResourceUrl } from "./gemini";
 import { quoteFx } from "./fx";
 import { tokenFor } from "../clearing/assets";
 import { authorizeIntent, supportsEip3009 } from "./guardrail";
@@ -212,6 +213,27 @@ export function runNexusSelfTests(): TestResult[] {
     partner: "mastercard-agent-pay",
   });
   check("unlicensed card partner is blocked", card.status === "blocked", card.reason);
+
+  check(
+    "gemini accepts a resource url",
+    assertResourceUrl({ url: "https://github.com/Victory963/NexusSettle" }) ===
+      "https://github.com/Victory963/NexusSettle",
+    "url",
+  );
+  let rejectedPaymentField = false;
+  try {
+    assertResourceUrl({ url: "https://example.com/resource", amount: "1" });
+  } catch {
+    rejectedPaymentField = true;
+  }
+  check("gemini rejects payment fields", rejectedPaymentField, "amount");
+  let rejectedScheme = false;
+  try {
+    assertResourceUrl({ url: "file:///etc/passwd" });
+  } catch {
+    rejectedScheme = true;
+  }
+  check("gemini rejects non-http url", rejectedScheme, "file");
 
   return results;
 }
